@@ -9,4 +9,15 @@
 
     <string name="hello_first_fragment">Hello first fragment</string>
     <string name="hello_second_fragment">Hello second fragment. Arg: %1$s</string>
+    <string name="emoticon">:D</string>
+    <string name="btn_at">\@</string>
+    <string name="btn_abc">abc</string>
+    <string name="btn_def">def</string>
+    <string name="btn_ghi">ghi</string>
+    <string name="btn_jkl">jkl</string>
+    <string name="btn_mno">mno</string>
+    <string name="btn_pqrs">pqrs</string>
+    <string name="btn_tuv">tuv</string>
+    <string name="btn_wxyz">wxyz</string>
+    <string name="btn_del">del</string>
 </resources>
