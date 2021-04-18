@@ -20,4 +20,9 @@
     <string name="btn_tuv">tuv</string>
     <string name="btn_wxyz">wxyz</string>
     <string name="btn_del">del</string>
+    <string name="exclamation_mark">!</string>
+    <string name="question_mark">\?</string>
+    <string name="comma">,</string>
+    <string name="dot">.</string>
+    <string name="colon">:</string>
 </resources>

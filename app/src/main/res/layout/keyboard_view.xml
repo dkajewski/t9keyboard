@@ -1,26 +1,83 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_height="@dimen/_156sdp"
+    android:layout_height="@dimen/_160sdp"
     android:layout_width="match_parent"
     android:background="@color/keyboard_background_color"
     android:orientation="horizontal">
     <TableLayout
-        android:layout_width="@dimen/_60sdp"
+        android:layout_width="@dimen/_40sdp"
         android:layout_height="match_parent">
-        <TableRow>
-            <Button
-                style="@style/ButtonStyle"
-                android:id="@+id/button_emoticon"
-                android:layout_width="wrap_content"
+
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/_120sdp"
+            android:fillViewport="true">
+
+            <TableLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/emoticon"/>
-        </TableRow>
+                android:stretchColumns="1">
+                <TableRow>
+                    <Button
+                        style="@style/ButtonStyle"
+                        android:id="@+id/custom_1"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/emoticon"/>
+                </TableRow>
+                <TableRow>
+                    <Button
+                        style="@style/ButtonStyle"
+                        android:id="@+id/custom_2"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/question_mark"/>
+                </TableRow>
+                <TableRow>
+                    <Button
+                        style="@style/ButtonStyle"
+                        android:id="@+id/custom_3"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/exclamation_mark"/>
+                </TableRow>
+                <TableRow>
+                    <Button
+                        style="@style/ButtonStyle"
+                        android:id="@+id/custom_4"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/comma"/>
+                </TableRow>
+                <TableRow>
+                    <Button
+                        style="@style/ButtonStyle"
+                        android:id="@+id/custom_5"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/dot"/>
+                </TableRow>
+                <TableRow>
+                    <Button
+                        style="@style/ButtonStyle"
+                        android:id="@+id/custom_6"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/colon"/>
+                </TableRow>
+            </TableLayout>
+        </ScrollView>
     </TableLayout>
     <TableLayout
-        android:layout_width="@dimen/_200sdp"
+        android:layout_width="@dimen/_220sdp"
         android:layout_height="match_parent"
-        android:layout_marginStart="@dimen/_60sdp">
+        android:layout_marginStart="@dimen/_40sdp">
         <TableRow>
             <Button
                 android:id="@+id/button_1"
@@ -95,6 +152,15 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:text="@string/btn_wxyz"/>
+        </TableRow>
+        <TableRow>
+            <Button
+                style="@style/ButtonStyle"
+                android:id="@+id/button_space"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text=""/>
         </TableRow>
     </TableLayout>
     <TableLayout

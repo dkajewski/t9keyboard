@@ -2,6 +2,7 @@ package pl.dkajewski.t9keyboard.t9keyboard;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Map;
 
 public class T9Keys
 {
@@ -31,12 +32,15 @@ public class T9Keys
     {
         this.keyToValues = new HashMap<>();
         this.keyToValues = this.getCommonKeys();
+        this.addPolishLetters();
+        this.addNumbers();
     }
 
     public void initKeysEN()
     {
         this.keyToValues = new HashMap<>();
         this.keyToValues = this.getCommonKeys();
+        this.addNumbers();
     }
 
     private HashMap<String, ArrayList<String>> getCommonKeys()
@@ -90,6 +94,44 @@ public class T9Keys
         commonKeys.put("9", _9);
 
         return commonKeys;
+    }
+
+    private void addNumbers()
+    {
+        for (Map.Entry<String, ArrayList<String>> item: this.keyToValues.entrySet()) {
+            item.getValue().add(item.getKey());
+        }
+    }
+
+    private void addPolishLetters()
+    {
+        for (Map.Entry<String, ArrayList<String>> item: this.keyToValues.entrySet()) {
+            switch (item.getKey()) {
+                case "2":
+                    item.getValue().add("ą");
+                    item.getValue().add("ć");
+                    break;
+                case "3":
+                    item.getValue().add("ę");
+                    break;
+                case "5":
+                    item.getValue().add("ł");
+                    break;
+                case "6":
+                    item.getValue().add("ń");
+                    item.getValue().add("ó");
+                    break;
+                case "7":
+                    item.getValue().add("ś");
+                    break;
+                case "9":
+                    item.getValue().add("ź");
+                    item.getValue().add("ż");
+                    break;
+                default: break;
+
+            }
+        }
     }
 
 }
