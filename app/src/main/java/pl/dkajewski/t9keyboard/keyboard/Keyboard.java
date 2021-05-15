@@ -1,4 +1,4 @@
-package pl.dkajewski.t9keyboard.t9keyboard;
+package pl.dkajewski.t9keyboard.keyboard;
 
 import android.content.Context;
 import android.text.TextUtils;
@@ -16,7 +16,7 @@ import pl.dkajewski.t9keyboard.R;
 import pl.dkajewski.t9keyboard.T9InputMethodService;
 import pl.dkajewski.t9keyboard.clickdetails.ClickDetails;
 
-public class T9Keyboard extends RelativeLayout implements View.OnClickListener {
+public class Keyboard extends RelativeLayout implements View.OnClickListener {
 
     private Button button1, button2, button3, button4,
             button5, button6, button7, button8,
@@ -27,25 +27,29 @@ public class T9Keyboard extends RelativeLayout implements View.OnClickListener {
 
     private InputConnection inputConnection;
     private ArrayList<ClickDetails> clickDetails;
-    private T9Keys keyValues;
+    private Keys keyValues;
     private SparseArray<String> keysToButtons = new SparseArray<>();
-    private int previousClickedButtonsCount = 0;
 
-    public T9Keyboard(Context context) {
+    private static long lastClickTime = 0;
+    private static long currentClickTime = 0;
+    public static final long MAX_TIME_BETWEEN_CLICKS = 400;
+
+    public Keyboard(Context context) {
         this(context, null, 0);
     }
 
-    public T9Keyboard(Context context, AttributeSet attrs) {
+    public Keyboard(Context context, AttributeSet attrs) {
         this(context, attrs, 0);
     }
 
-    public T9Keyboard(Context context, AttributeSet attrs, int defStyleAttr) {
+    public Keyboard(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
         this.context = (T9InputMethodService) context;
         this.init(context, attrs);
         this.clickDetails = new ArrayList<>();
-        this.keyValues = new T9Keys("PL");
+        this.keyValues = new Keys("PL");
         this.setKeysToButtons();
+        this.inputConnection = this.context.getInputConnection();
     }
 
     private void init(Context context, AttributeSet attrs)
@@ -56,6 +60,16 @@ public class T9Keyboard extends RelativeLayout implements View.OnClickListener {
     @Override
     public void onClick(View view)
     {
+        this.inputConnection = this.context.getInputConnection();
+        if (currentClickTime != 0) {
+            lastClickTime = currentClickTime;
+        }
+
+        currentClickTime = System.currentTimeMillis();
+        if (currentClickTime - lastClickTime > MAX_TIME_BETWEEN_CLICKS) {
+            this.finishComposingText();
+        }
+
         this.multiTapInputMethodHandler(view);
     }
 
@@ -65,11 +79,8 @@ public class T9Keyboard extends RelativeLayout implements View.OnClickListener {
         int buttonId = view.getId();
         switch (buttonId) {
             case R.id.button_delete:
-                inputConnection.finishComposingText();
+                this.finishComposingText();
                 CharSequence selectedText = inputConnection.getSelectedText(0);
-                if (this.clickDetails.size() > 0) {
-                    this.clickDetails.clear();
-                }
                 if (TextUtils.isEmpty(selectedText)) {
                     inputConnection.deleteSurroundingText(1, 0);
                 } else {
@@ -77,14 +88,21 @@ public class T9Keyboard extends RelativeLayout implements View.OnClickListener {
                 }
                 break;
             case R.id.custom_1: case R.id.custom_2: case R.id.custom_3: case R.id.custom_4: case R.id.custom_5: case R.id.custom_6:
-                this.inputConnection.finishComposingText();
+                this.finishComposingText();
                 String buttonText = ((Button) view).getText().toString();
                 inputConnection.commitText(buttonText, 1);
                 break;
             case R.id.button_space:
-                this.inputConnection.finishComposingText();
-                this.addSpace();
-                this.clickDetails.clear();
+                int currentCursorPos = 0;
+                if (this.clickDetails.size() > 0) {
+                    currentCursorPos = this.clickDetails.get(this.clickDetails.size()-1).cursorPosition;
+                } else {
+                    currentCursorPos = this.getCursorPosition();
+                }
+
+                this.finishComposingText();
+                this.addSpace(currentCursorPos);
+                this.finishComposingText();
                 break;
             default:
                 this.handleMultiTapLettersInput(buttonId);
@@ -136,12 +154,20 @@ public class T9Keyboard extends RelativeLayout implements View.OnClickListener {
 
     }
 
-    private String getTextToCommit(String key, int currentCharacter)
+    /**
+     * Method returns character to be entered
+     * @param key keyboard key from which character will be retrieved
+     * @return text/character assigned to the key given in the parameter
+     */
+    private String getTextToCommit(String key)
     {
         ArrayList<String> chars = this.keyValues.getKeyChars(key);
-        return this.clickDetails.get(currentCharacter).getClickedString(chars);
+        return this.clickDetails.get(0).getClickedString(chars);
     }
 
+    /**
+     * Method sets values of keysToButtonsField field (button id to corresponding key)
+     */
     private void setKeysToButtons()
     {
         this.keysToButtons.put(R.id.button_1, "1");
@@ -155,6 +181,10 @@ public class T9Keyboard extends RelativeLayout implements View.OnClickListener {
         this.keysToButtons.put(R.id.button_9, "9");
     }
 
+    /**
+     * Method calculates current cursor position based on full text input length and text before cursor
+     * @return current cursor position
+     */
     private int getCursorPosition()
     {
         //get the total text first
@@ -165,43 +195,50 @@ public class T9Keyboard extends RelativeLayout implements View.OnClickListener {
         return beforeText.length();
     }
 
-    private void addSpace()
+    /**
+     * Method adds space to current input selection and sets cursor position to be after entered space
+     * @param cursorPosition current cursor position
+     */
+    private void addSpace(int cursorPosition)
     {
-        this.inputConnection.commitText(" ", this.getCursorPosition());
+        this.inputConnection.commitText(" ", cursorPosition);
+        this.inputConnection.setSelection(cursorPosition+1, cursorPosition+1);
     }
 
+    /**
+     * Method detects if clicked button was clicked for the nth time (then sets text in composition) or was clicked new button
+     * (then commits previous character and sets composition for new one). Manages cursor position to be always after entered character
+     * @param buttonId id of clicked button
+     */
     private void handleMultiTapLettersInput(int buttonId)
     {
-        //todo: fix cursor bug
-        this.previousClickedButtonsCount = this.clickDetails.size();
-        if (this.previousClickedButtonsCount == 0 || buttonId != this.clickDetails.get(this.previousClickedButtonsCount - 1).clickedButton) {
-            this.clickDetails.add(new ClickDetails(buttonId));
-        } else {
-            this.clickDetails.get(this.previousClickedButtonsCount - 1).clicked(buttonId);
-        }
-
-        if (this.previousClickedButtonsCount < this.clickDetails.size()) {
-            if (this.previousClickedButtonsCount != 0) {
-                String letter = this.getTextToCommit(this.keysToButtons.get(this.clickDetails.get(this.previousClickedButtonsCount - 1).clickedButton), this.previousClickedButtonsCount - 1);
-                inputConnection.commitText(letter, this.getCursorPosition());
+        int cursorPosition = this.getCursorPosition();
+        if (this.clickDetails.size() == 0 || this.clickDetails.get(this.clickDetails.size()-1).clickedButton != buttonId) {
+            if (this.clickDetails.size() > 0) {
+                this.finishComposingText();
             }
 
-            String letter = this.getTextToCommit(this.keysToButtons.get(buttonId), this.clickDetails.size()-1);
-            inputConnection.setComposingText(letter, this.getCursorPosition());
+            this.clickDetails.add(new ClickDetails(buttonId, cursorPosition+1));
         } else {
-            ClickDetails currentKey = this.clickDetails.get(this.clickDetails.size() - 1);
-            if (currentKey.getTimeBetweenClicks() > ClickDetails.MAX_TIME_BETWEEN_CLICKS) {
-                if (currentKey.timesClicked > 1) {
-                    currentKey.timesClicked--;
-                }
-
-                String letter = this.getTextToCommit(this.keysToButtons.get(currentKey.clickedButton), this.clickDetails.size()-1);
-                inputConnection.commitText(letter, this.getCursorPosition());
-                currentKey.timesClicked = 1;
-            }
-
-            String letter = this.getTextToCommit(this.keysToButtons.get(buttonId), this.clickDetails.size()-1);
-            inputConnection.setComposingText(letter, this.getCursorPosition());
+            ClickDetails lastClickedBtn = this.clickDetails.get(this.clickDetails.size()-1);
+            this.clickDetails.clear();
+            this.clickDetails.add(lastClickedBtn);
+            this.clickDetails.get(0).clicked(buttonId);
         }
+
+        ClickDetails clicked = this.clickDetails.get(this.clickDetails.size()-1);
+        String text = this.getTextToCommit(this.keysToButtons.get(clicked.clickedButton));
+        this.inputConnection.setComposingText(text, cursorPosition);
+        this.inputConnection.setSelection(clicked.cursorPosition, clicked.cursorPosition);
     }
+
+    /**
+     * Finish composing text. Clear clickDetails field
+     */
+    private void finishComposingText()
+    {
+        this.inputConnection.finishComposingText();
+        this.clickDetails.clear();
+    }
+
 }

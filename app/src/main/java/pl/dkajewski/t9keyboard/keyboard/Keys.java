@@ -1,15 +1,15 @@
-package pl.dkajewski.t9keyboard.t9keyboard;
+package pl.dkajewski.t9keyboard.keyboard;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
-public class T9Keys
+public class Keys
 {
 
     private HashMap<String, ArrayList<String>> keyToValues;
 
-    public T9Keys(String language)
+    public Keys(String language)
     {
         this.initKeyToValues(language);
     }

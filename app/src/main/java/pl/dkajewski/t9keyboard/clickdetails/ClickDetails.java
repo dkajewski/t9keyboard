@@ -8,11 +8,11 @@ public class ClickDetails
     public long clickedTimeMs = 0;
     public int clickedButton = 0;
     public int timesClicked = 0;
+    public int cursorPosition;
 
-    public static final long MAX_TIME_BETWEEN_CLICKS = 370;
-
-    public ClickDetails(int button)
+    public ClickDetails(int button, int cursorPosition)
     {
+        this.cursorPosition = cursorPosition;
         this.clicked(button);
     }
 
