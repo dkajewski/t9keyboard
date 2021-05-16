@@ -12,6 +12,8 @@ import android.widget.Button;
 import android.widget.RelativeLayout;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+
 import pl.dkajewski.t9keyboard.R;
 import pl.dkajewski.t9keyboard.T9InputMethodService;
 import pl.dkajewski.t9keyboard.clickdetails.ClickDetails;
@@ -22,7 +24,7 @@ public class Keyboard extends RelativeLayout implements View.OnClickListener {
             button5, button6, button7, button8,
             button9, button0, buttonDelete, buttonEnter,
             customBtn1, customBtn2, customBtn3, customBtn4, customBtn5, customBtn6,
-            buttonSpace;
+            buttonSpace, buttonShift;
     private T9InputMethodService context;
 
     private InputConnection inputConnection;
@@ -33,6 +35,7 @@ public class Keyboard extends RelativeLayout implements View.OnClickListener {
     private static long lastClickTime = 0;
     private static long currentClickTime = 0;
     public static final long MAX_TIME_BETWEEN_CLICKS = 400;
+    private byte shiftMode = 0;
 
     public Keyboard(Context context) {
         this(context, null, 0);
@@ -60,16 +63,7 @@ public class Keyboard extends RelativeLayout implements View.OnClickListener {
     @Override
     public void onClick(View view)
     {
-        this.inputConnection = this.context.getInputConnection();
-        if (currentClickTime != 0) {
-            lastClickTime = currentClickTime;
-        }
-
-        currentClickTime = System.currentTimeMillis();
-        if (currentClickTime - lastClickTime > MAX_TIME_BETWEEN_CLICKS) {
-            this.finishComposingText();
-        }
-
+        this.handleTimeIntervals(view);
         this.multiTapInputMethodHandler(view);
     }
 
@@ -79,13 +73,7 @@ public class Keyboard extends RelativeLayout implements View.OnClickListener {
         int buttonId = view.getId();
         switch (buttonId) {
             case R.id.button_delete:
-                this.finishComposingText();
-                CharSequence selectedText = inputConnection.getSelectedText(0);
-                if (TextUtils.isEmpty(selectedText)) {
-                    inputConnection.deleteSurroundingText(1, 0);
-                } else {
-                    inputConnection.commitText("", 1);
-                }
+                this.deleteButtonHandler();
                 break;
             case R.id.custom_1: case R.id.custom_2: case R.id.custom_3: case R.id.custom_4: case R.id.custom_5: case R.id.custom_6:
                 this.finishComposingText();
@@ -103,6 +91,9 @@ public class Keyboard extends RelativeLayout implements View.OnClickListener {
                 this.finishComposingText();
                 this.addSpace(currentCursorPos);
                 this.finishComposingText();
+                break;
+            case R.id.button_shift :
+                this.setShiftMode();
                 break;
             default:
                 this.handleMultiTapLettersInput(buttonId);
@@ -137,6 +128,8 @@ public class Keyboard extends RelativeLayout implements View.OnClickListener {
         buttonDelete.setOnClickListener(this);
 //        buttonEnter = findViewById(R.id.button_enter);
 //        buttonEnter.setOnClickListener(this);
+        buttonShift = findViewById(R.id.button_shift);
+        buttonShift.setOnClickListener(this);
         buttonSpace = findViewById(R.id.button_space);
         buttonSpace.setOnClickListener(this);
         customBtn1 = findViewById(R.id.custom_1);
@@ -162,7 +155,22 @@ public class Keyboard extends RelativeLayout implements View.OnClickListener {
     private String getTextToCommit(String key)
     {
         ArrayList<String> chars = this.keyValues.getKeyChars(key);
-        return this.clickDetails.get(0).getClickedString(chars);
+        String text = this.clickDetails.get(0).getClickedString(chars);
+        if (this.shiftMode == 1 || this.shiftMode == 2) {
+            text = text.toUpperCase();
+        } else {
+            text = text.toLowerCase();
+        }
+
+        return text;
+    }
+
+    private void setShiftModeAfterTextCommit()
+    {
+        if (this.shiftMode == 1) {
+            this.shiftMode = 0;
+            this.shiftButtonHandler();
+        }
     }
 
     /**
@@ -216,6 +224,7 @@ public class Keyboard extends RelativeLayout implements View.OnClickListener {
         if (this.clickDetails.size() == 0 || this.clickDetails.get(this.clickDetails.size()-1).clickedButton != buttonId) {
             if (this.clickDetails.size() > 0) {
                 this.finishComposingText();
+                this.setShiftModeAfterTextCommit();
             }
 
             this.clickDetails.add(new ClickDetails(buttonId, cursorPosition+1));
@@ -230,6 +239,7 @@ public class Keyboard extends RelativeLayout implements View.OnClickListener {
         String text = this.getTextToCommit(this.keysToButtons.get(clicked.clickedButton));
         this.inputConnection.setComposingText(text, cursorPosition);
         this.inputConnection.setSelection(clicked.cursorPosition, clicked.cursorPosition);
+        this.setShiftModeAfterTextCommit();
     }
 
     /**
@@ -239,6 +249,72 @@ public class Keyboard extends RelativeLayout implements View.OnClickListener {
     {
         this.inputConnection.finishComposingText();
         this.clickDetails.clear();
+    }
+
+    /**
+     * Sets letter case in the keyboard depending on shiftMode field
+     */
+    private void shiftButtonHandler()
+    {
+        if (this.shiftMode == 0 || this.shiftMode == 1) {
+            // we skip index 0, because it's not abc like button
+            for (int i = 1; i < this.keysToButtons.size(); i++) {
+                Button button = findViewById(this.keysToButtons.keyAt(i));
+                String text = button.getText().toString();
+                if (this.shiftMode == 0) {
+                    button.setText(text.toLowerCase());
+                } else {
+                    button.setText(text.toUpperCase());
+                }
+            }
+        }
+    }
+
+    /**
+     * Deletes one character from input
+     */
+    private void deleteButtonHandler()
+    {
+        this.finishComposingText();
+        CharSequence selectedText = inputConnection.getSelectedText(0);
+        if (TextUtils.isEmpty(selectedText)) {
+            inputConnection.deleteSurroundingText(1, 0);
+        } else {
+            inputConnection.commitText("", 1);
+        }
+    }
+
+    /**
+     * Sets state of the shift button and then calls shiftButtonHandler method
+     */
+    private void setShiftMode()
+    {
+        if (this.shiftMode == 2) {
+            this.shiftMode = 0;
+        } else {
+            this.shiftMode++;
+        }
+
+        this.shiftButtonHandler();
+    }
+
+    /**
+     * Method responsible for calling finishComposingText, when time between clicks is greater than MAX_TIME_BETWEEN_CLICKS
+     * @param view in that case it's treated like a clicked button
+     */
+    private void handleTimeIntervals(View view)
+    {
+        this.inputConnection = this.context.getInputConnection();
+        if (currentClickTime != 0) {
+            lastClickTime = currentClickTime;
+        }
+
+        int[] skipButtons = {R.id.button_shift, R.id.button_delete};
+        boolean skipFinish = Arrays.binarySearch(skipButtons, view.getId()) >= 0;
+        currentClickTime = System.currentTimeMillis();
+        if (currentClickTime - lastClickTime > MAX_TIME_BETWEEN_CLICKS && !skipFinish) {
+            this.finishComposingText();
+        }
     }
 
 }
