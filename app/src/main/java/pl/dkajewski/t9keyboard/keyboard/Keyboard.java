@@ -1,22 +1,17 @@
 package pl.dkajewski.t9keyboard.keyboard;
 
 import android.content.Context;
-import android.text.TextUtils;
 import android.util.AttributeSet;
 import android.util.SparseArray;
 import android.view.LayoutInflater;
 import android.view.View;
-import android.view.inputmethod.ExtractedTextRequest;
 import android.view.inputmethod.InputConnection;
 import android.widget.Button;
 import android.widget.RelativeLayout;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-
 import pl.dkajewski.t9keyboard.R;
 import pl.dkajewski.t9keyboard.T9InputMethodService;
-import pl.dkajewski.t9keyboard.clickdetails.ClickDetails;
+import pl.dkajewski.t9keyboard.input.InputCommon;
+import pl.dkajewski.t9keyboard.input.Multitap;
 
 public class Keyboard extends RelativeLayout implements View.OnClickListener {
 
@@ -28,14 +23,12 @@ public class Keyboard extends RelativeLayout implements View.OnClickListener {
     private T9InputMethodService context;
 
     private InputConnection inputConnection;
-    private ArrayList<ClickDetails> clickDetails;
-    private Keys keyValues;
+
+
     private SparseArray<String> keysToButtons = new SparseArray<>();
 
-    private static long lastClickTime = 0;
-    private static long currentClickTime = 0;
-    public static final long MAX_TIME_BETWEEN_CLICKS = 400;
-    private byte shiftMode = 0;
+    private InputCommon inputMethod;
+
 
     public Keyboard(Context context) {
         this(context, null, 0);
@@ -48,58 +41,21 @@ public class Keyboard extends RelativeLayout implements View.OnClickListener {
     public Keyboard(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
         this.context = (T9InputMethodService) context;
-        this.init(context, attrs);
-        this.clickDetails = new ArrayList<>();
-        this.keyValues = new Keys("PL");
+        this.initT9Buttons(context);
+
+
         this.setKeysToButtons();
         this.inputConnection = this.context.getInputConnection();
-    }
-
-    private void init(Context context, AttributeSet attrs)
-    {
-        this.initT9Buttons(context);
+        this.inputMethod = new Multitap(this.context, this.inputConnection, this.keysToButtons, this);
     }
 
     @Override
     public void onClick(View view)
     {
-        this.handleTimeIntervals(view);
-        this.multiTapInputMethodHandler(view);
+        this.inputMethod.handleInput(view);
     }
 
-    private void multiTapInputMethodHandler(View view)
-    {
-        inputConnection = this.context.getInputConnection();
-        int buttonId = view.getId();
-        switch (buttonId) {
-            case R.id.button_delete:
-                this.deleteButtonHandler();
-                break;
-            case R.id.custom_1: case R.id.custom_2: case R.id.custom_3: case R.id.custom_4: case R.id.custom_5: case R.id.custom_6:
-                this.finishComposingText();
-                String buttonText = ((Button) view).getText().toString();
-                inputConnection.commitText(buttonText, 1);
-                break;
-            case R.id.button_space:
-                int currentCursorPos = 0;
-                if (this.clickDetails.size() > 0) {
-                    currentCursorPos = this.clickDetails.get(this.clickDetails.size()-1).cursorPosition;
-                } else {
-                    currentCursorPos = this.getCursorPosition();
-                }
 
-                this.finishComposingText();
-                this.addSpace(currentCursorPos);
-                this.finishComposingText();
-                break;
-            case R.id.button_shift :
-                this.setShiftMode();
-                break;
-            default:
-                this.handleMultiTapLettersInput(buttonId);
-                break;
-        }
-    }
 
     private void initT9Buttons(Context context)
     {
@@ -148,32 +104,6 @@ public class Keyboard extends RelativeLayout implements View.OnClickListener {
     }
 
     /**
-     * Method returns character to be entered
-     * @param key keyboard key from which character will be retrieved
-     * @return text/character assigned to the key given in the parameter
-     */
-    private String getTextToCommit(String key)
-    {
-        ArrayList<String> chars = this.keyValues.getKeyChars(key);
-        String text = this.clickDetails.get(0).getClickedString(chars);
-        if (this.shiftMode == 1 || this.shiftMode == 2) {
-            text = text.toUpperCase();
-        } else {
-            text = text.toLowerCase();
-        }
-
-        return text;
-    }
-
-    private void setShiftModeAfterTextCommit()
-    {
-        if (this.shiftMode == 1) {
-            this.shiftMode = 0;
-            this.shiftButtonHandler();
-        }
-    }
-
-    /**
      * Method sets values of keysToButtonsField field (button id to corresponding key)
      */
     private void setKeysToButtons()
@@ -187,134 +117,6 @@ public class Keyboard extends RelativeLayout implements View.OnClickListener {
         this.keysToButtons.put(R.id.button_7, "7");
         this.keysToButtons.put(R.id.button_8, "8");
         this.keysToButtons.put(R.id.button_9, "9");
-    }
-
-    /**
-     * Method calculates current cursor position based on full text input length and text before cursor
-     * @return current cursor position
-     */
-    private int getCursorPosition()
-    {
-        //get the total text first
-        String fullText = this.inputConnection.getExtractedText(new ExtractedTextRequest(),0).text.toString();
-        //get whole text before the cursor
-        String beforeText = this.inputConnection.getTextBeforeCursor(fullText.length(),0).toString();
-
-        return beforeText.length();
-    }
-
-    /**
-     * Method adds space to current input selection and sets cursor position to be after entered space
-     * @param cursorPosition current cursor position
-     */
-    private void addSpace(int cursorPosition)
-    {
-        this.inputConnection.commitText(" ", cursorPosition);
-        this.inputConnection.setSelection(cursorPosition+1, cursorPosition+1);
-    }
-
-    /**
-     * Method detects if clicked button was clicked for the nth time (then sets text in composition) or was clicked new button
-     * (then commits previous character and sets composition for new one). Manages cursor position to be always after entered character
-     * @param buttonId id of clicked button
-     */
-    private void handleMultiTapLettersInput(int buttonId)
-    {
-        int cursorPosition = this.getCursorPosition();
-        if (this.clickDetails.size() == 0 || this.clickDetails.get(this.clickDetails.size()-1).clickedButton != buttonId) {
-            if (this.clickDetails.size() > 0) {
-                this.finishComposingText();
-                this.setShiftModeAfterTextCommit();
-            }
-
-            this.clickDetails.add(new ClickDetails(buttonId, cursorPosition+1));
-        } else {
-            ClickDetails lastClickedBtn = this.clickDetails.get(this.clickDetails.size()-1);
-            this.clickDetails.clear();
-            this.clickDetails.add(lastClickedBtn);
-            this.clickDetails.get(0).clicked(buttonId);
-        }
-
-        ClickDetails clicked = this.clickDetails.get(this.clickDetails.size()-1);
-        String text = this.getTextToCommit(this.keysToButtons.get(clicked.clickedButton));
-        this.inputConnection.setComposingText(text, cursorPosition);
-        this.inputConnection.setSelection(clicked.cursorPosition, clicked.cursorPosition);
-        this.setShiftModeAfterTextCommit();
-    }
-
-    /**
-     * Finish composing text. Clear clickDetails field
-     */
-    private void finishComposingText()
-    {
-        this.inputConnection.finishComposingText();
-        this.clickDetails.clear();
-    }
-
-    /**
-     * Sets letter case in the keyboard depending on shiftMode field
-     */
-    private void shiftButtonHandler()
-    {
-        if (this.shiftMode == 0 || this.shiftMode == 1) {
-            // we skip index 0, because it's not abc like button
-            for (int i = 1; i < this.keysToButtons.size(); i++) {
-                Button button = findViewById(this.keysToButtons.keyAt(i));
-                String text = button.getText().toString();
-                if (this.shiftMode == 0) {
-                    button.setText(text.toLowerCase());
-                } else {
-                    button.setText(text.toUpperCase());
-                }
-            }
-        }
-    }
-
-    /**
-     * Deletes one character from input
-     */
-    private void deleteButtonHandler()
-    {
-        this.finishComposingText();
-        CharSequence selectedText = inputConnection.getSelectedText(0);
-        if (TextUtils.isEmpty(selectedText)) {
-            inputConnection.deleteSurroundingText(1, 0);
-        } else {
-            inputConnection.commitText("", 1);
-        }
-    }
-
-    /**
-     * Sets state of the shift button and then calls shiftButtonHandler method
-     */
-    private void setShiftMode()
-    {
-        if (this.shiftMode == 2) {
-            this.shiftMode = 0;
-        } else {
-            this.shiftMode++;
-        }
-
-        this.shiftButtonHandler();
-    }
-
-    /**
-     * Method responsible for calling finishComposingText, when time between clicks is greater than MAX_TIME_BETWEEN_CLICKS
-     * @param view in that case it's treated like a clicked button
-     */
-    private void handleTimeIntervals(View view)
-    {
-        this.inputConnection = this.context.getInputConnection();
-        if (currentClickTime != 0) {
-            lastClickTime = currentClickTime;
-        }
-
-        int[] skipButtons = {R.id.button_shift, R.id.button_delete};
-        boolean skipFinish = Arrays.binarySearch(skipButtons, view.getId()) >= 0;
-        currentClickTime = System.currentTimeMillis();
-        if (currentClickTime - lastClickTime > MAX_TIME_BETWEEN_CLICKS && !skipFinish) {
-            this.finishComposingText();
-        }
     }
 
 }
