@@ -1,12 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_height="@dimen/_160sdp"
+    android:layout_height="@dimen/_200sdp"
     android:layout_width="match_parent"
     android:background="@color/keyboard_background_color"
     android:orientation="horizontal">
+    <HorizontalScrollView
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/_40sdp"
+        android:fillViewport="true">
+        <LinearLayout
+            android:orientation="horizontal"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent">
+
+        </LinearLayout>
+    </HorizontalScrollView>
     <TableLayout
         android:layout_width="@dimen/_40sdp"
-        android:layout_height="match_parent">
+        android:layout_height="match_parent"
+        android:layout_marginTop="@dimen/_40sdp">
 
         <ScrollView
             android:layout_width="match_parent"
@@ -77,7 +89,8 @@
     <TableLayout
         android:layout_width="@dimen/_220sdp"
         android:layout_height="match_parent"
-        android:layout_marginStart="@dimen/_40sdp">
+        android:layout_marginStart="@dimen/_40sdp"
+        android:layout_marginTop="@dimen/_40sdp">
         <TableRow>
             <Button
                 android:id="@+id/button_1"
@@ -166,7 +179,8 @@
     <TableLayout
         android:layout_width="@dimen/_60sdp"
         android:layout_height="match_parent"
-        android:layout_marginStart="@dimen/_260sdp">
+        android:layout_marginStart="@dimen/_260sdp"
+        android:layout_marginTop="@dimen/_40sdp">
         <TableRow>
             <Button
                 style="@style/ButtonStyle"
